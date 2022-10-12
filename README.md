@@ -1,2 +1,2 @@
 # CUDA-Projects
-A repository aimed at developing CUDA based applications
+A repository aimed at developing CUDA based programs
