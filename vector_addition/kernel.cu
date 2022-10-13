@@ -28,6 +28,16 @@ int main() {
 		c[i] = 0;
 	}
 
+	for (int i = 0; i < 10; i++) {
+		printf("a[%d] = %d  |", i, a[i]);
+	}
+	printf("\n");
+
+	for (int i = 0; i < 10; i++) {
+		printf("b[%d] = %d  |", i, b[i]);
+	}
+	printf("\n");
+
 	// calling the kernel function to be executed by the GPU
 
 	vectorAddition <<<1, SIZE>>> (a, b, c, SIZE);
@@ -37,8 +47,9 @@ int main() {
 	// end of call
 
 	for (int i = 0; i < 10; i++) {
-		printf("%d\n", c[i]);
+		printf("c[%d] = %d  |", i,c[i]);
 	}
+	printf("\n");
 
 	// free the allocated unified memory
 	cudaFree(a);
