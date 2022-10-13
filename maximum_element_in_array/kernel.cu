@@ -3,7 +3,7 @@
 
 #define SIZE 16
 
-__global__ void findMaximum(int *h_max, int *d_max) {
+__global__ void findMaximum(int *d_max) {
 	int threadId = threadIdx.x;
 
 	int stride = SIZE / 2;
@@ -39,10 +39,9 @@ __global__ void findMaximum(int *h_max, int *d_max) {
 int main()
 {
 	// declaring integer arrays
-	int *h_max, *d_max;
+	int *d_max;
 	
 	// allocating memory in global spcae
-	cudaMallocManaged(&h_max, SIZE * sizeof(int));
 	cudaMallocManaged(&d_max, SIZE * sizeof(int));
 
 	//generating random array
@@ -57,7 +56,7 @@ int main()
 	printf("\n");
 
 	// call kernel function to be executed by the GPU
-	findMaximum <<<1, SIZE >>> (h_max, d_max);
+	findMaximum <<<1, SIZE >>> (d_max);
 
 	cudaDeviceSynchronize();
 
@@ -65,7 +64,6 @@ int main()
 
 	printf("Maximum value in the array = %d", d_max[0]);
 
-	cudaFree(h_max);
 	cudaFree(d_max);
 
 	return 0;
