@@ -4,6 +4,11 @@ using namespace std;
 
 #define N 300 // image of size NxN
 
+// Parallel Random matrix generation
+__global__ int* cudaMatrixGeneration(int * colored_image, int n){
+
+}
+
 // Sequential Random matrix generation
 int* generateRandomColoredImageSequentially(int* colored_image, int n){
     for(int i=0;i<n;i++){
