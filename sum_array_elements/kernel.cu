@@ -5,48 +5,29 @@
 using namespace std;
 using namespace std::chrono;
 
-#define N 10000 // no of elements of the array
+#define N 20 // no of elements of the array
 
 // Function to calculate sum of elements using parallel reduction
-__global__ void calculateSum(int *arr, int n, int *test) {
-	int currentRow = blockIdx.y * blockDim.y + threadIdx.y;
-	int currentColumn = blockIdx.x * blockDim.x + threadIdx.x;
-	//printf("Current Row = %d, Current Column = %d\n", currentRow, currentColumn);
-	//printf("Current Grid_x = %d, Grid_y = %d\n", gridDim.x, gridDim.y);
-	//printf("Current Block_x = %d, Block_y = %d\n", blockDim.x, blockDim.y);
-	int currentThread = currentRow * (gridDim.x*blockDim.x) + currentColumn;
-	int stride = 1;
-	int temp = 2;
+__global__ void calculateSum(int *arr, int n) {
+	int currentRow = blockIdx.y * blockDim.y + threadIdx.y; // row id
+	int currentColumn = blockIdx.x * blockDim.x + threadIdx.x; // column id
+	int currentThread = currentRow * (gridDim.x*blockDim.x) + currentColumn; // thread id
+	int stride = 1; // stride
+	int temp = 2; // computation factor
 	
-	if (currentThread >= n)
+	if (currentThread >= n) // check if thread is in given range
 		return;
-	//printf("current_thread = %d", currentThread);
-	test[currentThread] = 1;
-	//printf("Current Thread = %d", currentThread);
 
-	__syncthreads();
+	__syncthreads(); // barrier synchronization
 
 	for (stride = 1; stride < n; stride *= 2) {
 		int indx = currentThread * temp;
 		if (indx < n) {
-			atomicAdd(&(arr[indx]), arr[indx + stride]);
-			//arr[indx] = arr[indx] + arr[indx + stride];
+			atomicAdd(&(arr[indx]), arr[indx + stride]); // critical section
 		}
 		temp = temp * 2;
-		//printf("Current thread : %d calculated arr[%d] = %d\n", currentThread, currentThread, arr[currentThread]);
-		__syncthreads();
+		__syncthreads(); // barrier synchronization
 	}
-
-	//while (currentThread % temp == 0 && stride < n) {
-		//atomicAdd(&(arr[currentThread]), arr[currentThread + stride]);
-		//arr[currentThread] = arr[currentThread] + arr[currentThread + stride];
-		//stride = stride * 2;
-		//temp = temp * 2;
-		//printf("Current thread : %d calculated arr[%d] = %d\n", currentThread, currentThread, arr[currentThread]);
-		//__syncthreads();
-	//}
-
-	//__syncthreads();
 	return;
 }
 
@@ -72,47 +53,38 @@ int main() {
 
 	srand(time(0));
 
-	int* arr;
-	int* test;
+	int* arr; // array to store the N integers
+
+	// unified memory access
 	cudaMallocManaged(&arr, N * sizeof(int));
-	cudaMallocManaged(&test, N * sizeof(int));
 
-	for (int i = 0; i < N; i++)
-		test[i] = 0;
-
+	// generate random array of integers
 	arr = generateRandomArray(arr);
 
 	// Print the generated array
-	//cout << "The generated array is :\n";
-	//for (int i = 0; i < N; i++) {
-	//	cout << arr[i] << " ";
-	//}
-	//cout << "\n";
+	cout << "The generated array is :\n";
+	for (int i = 0; i < N; i++) {
+		cout << arr[i] << " ";
+	}
+	cout << "\n";
 
+	// Sequential Sum of all Array Elements
 	auto start = high_resolution_clock::now();
 	int sequential_sum = calculateSumSequentially(arr, N);
 	auto stop = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>(stop - start);
 	cout << "Time taken by sequential part =  " << duration.count() << " microseconds\n";
 
-	// call the kernel function to calculate sum parallely
-	int tb_size = 256;
-	int grid_size = int(ceil(n / tb_size));
+	// Call the kernel function to calculate sum parallely
 	dim3 blocksPerGrid(100, 100);
 	dim3 threadsPerBlock(10, 10);
 	start = high_resolution_clock::now();
-	calculateSum << <grid_size, tb_size >> > (arr, N, test);
-	calculateSum << <grid_size, tb_size >> > (arr, N, test);
+	calculateSum << <blocksPerGrid, threadsPerBlock >> > (arr, N);
 	stop = high_resolution_clock::now();
 	cudaDeviceSynchronize();
 	
 	duration = duration_cast<microseconds>(stop - start);
 	cout << "Time taken by parallel part =  " << duration.count() << " microseconds\n";
-
-	for (int i = 0; i < N; i++) {
-		if (test[i] == 0)
-			cout << i << "\n";
-	}
 
 	int parallel_sum = arr[0];
 	cout << "The sum calculated sequentially = " << sequential_sum << "\n";
